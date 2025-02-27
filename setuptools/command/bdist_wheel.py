@@ -223,7 +223,7 @@ class bdist_wheel(Command):
         self.compression: str | int = "deflated"
         self.python_tag = python_tag()
         self.build_number: str | None = None
-        self.py_limited_api: str | Literal[False] = False
+        self.py_limited_api: str | Literal[False] = os.environ.get('py_limited_api', False)
         self.plat_name_supplied = False
 
     def finalize_options(self) -> None:
@@ -273,9 +273,12 @@ class bdist_wheel(Command):
         if self.build_number is not None and not self.build_number[:1].isdigit():
             raise ValueError("Build tag (build-number) must start with a digit.")
 
-    def _validate_py_limited_api(self) -> None:
+    def _validate_py_limited_api(self) -> None:           
         if not self.py_limited_api:
             return
+        
+        self.root_is_pure = False
+        self.universal = False            
 
         if not re.match(PY_LIMITED_API_PATTERN, self.py_limited_api):
             raise ValueError(f"py-limited-api must match '{PY_LIMITED_API_PATTERN}'")
@@ -352,6 +355,7 @@ class bdist_wheel(Command):
             supported_tags = [
                 (t.interpreter, t.abi, plat_name) for t in tags.sys_tags()
             ]
+            return tag
             assert tag in supported_tags, (
                 f"would build wheel with unsupported tag {tag}"
             )
